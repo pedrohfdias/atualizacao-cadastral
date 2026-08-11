@@ -450,11 +450,11 @@
       <div class="row">
         <div>
           <label>CPF</label>
-          <input type="text" name="cpf" placeholder="000.000.000-00" />
+          <input type="text" name="cpf" placeholder="000.000.000-00" inputmode="numeric" maxlength="14" />
         </div>
         <div>
           <label>Data de nascimento</label>
-          <input type="text" name="nasc" placeholder="dd/mm/aaaa" />
+          <input type="text" name="nasc" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" />
         </div>
       </div>
 
@@ -519,7 +519,7 @@
     <div class="moment">
       <div class="dot"></div>
       <div class="card">
-        <div class="photo" style="background-image:url('img/01-adolescentes.jpg')"></div>
+        <div class="photo" style="background-image:url('img/01-adolescentes.jpg'); background-position: center 20%;"></div>
         <div class="body">
           <div class="date">Ainda adolescentes</div>
           <h3>Onde tudo começou</h3>
@@ -531,7 +531,7 @@
     <div class="moment">
       <div class="dot"></div>
       <div class="card">
-        <div class="photo" style="background-image:url('img/02-namoro.jpg')"></div>
+        <div class="photo" style="background-image:url('img/02-namoro.jpg'); background-position: center 40%;"></div>
         <div class="body">
           <div class="date">11 de agosto de 2015</div>
           <h3>O dia em que virou "nós"</h3>
@@ -543,7 +543,7 @@
     <div class="moment">
       <div class="dot"></div>
       <div class="card">
-        <div class="photo" style="background-image:url('img/03-aventuras.jpg')"></div>
+        <div class="photo" style="background-image:url('img/03-aventuras.jpg'); background-position: center 40%;"></div>
         <div class="body">
           <div class="date">Os anos seguintes</div>
           <h3>Só nós dois</h3>
@@ -567,7 +567,7 @@
     <div class="moment">
       <div class="dot"></div>
       <div class="card">
-        <div class="photo" style="background-image:url('img/05-mar.jpg')"></div>
+        <div class="photo" style="background-image:url('img/05-mar.jpg'); background-position: center 55%;"></div>
         <div class="body">
           <div class="date">Nossos cantinhos no mundo</div>
           <h3>Mar, sol e a gente</h3>
@@ -691,6 +691,26 @@
       if (chkDeclaro) {
         chkDeclaro.addEventListener("change", () => { btn.disabled = !chkDeclaro.checked; });
       }
+
+      // Máscaras: CPF (000.000.000-00) e data de nascimento (dd/mm/aaaa),
+      // mantêm a pontuação mesmo se digitar só números.
+      const inpCpf = form.querySelector('input[name="cpf"]');
+      const inpNasc = form.querySelector('input[name="nasc"]');
+      function mascaraCpf(v) {
+        v = v.replace(/\D/g, "").slice(0, 11);
+        if (v.length > 9) return v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+        if (v.length > 6) return v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+        if (v.length > 3) return v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+        return v;
+      }
+      function mascaraData(v) {
+        v = v.replace(/\D/g, "").slice(0, 8);
+        if (v.length > 4) return v.replace(/(\d{2})(\d{2})(\d{1,4})/, "$1/$2/$3");
+        if (v.length > 2) return v.replace(/(\d{2})(\d{1,2})/, "$1/$2");
+        return v;
+      }
+      if (inpCpf) inpCpf.addEventListener("input", () => { inpCpf.value = mascaraCpf(inpCpf.value); });
+      if (inpNasc) inpNasc.addEventListener("input", () => { inpNasc.value = mascaraData(inpNasc.value); });
 
       form.addEventListener("submit", function (e) {
         e.preventDefault();
