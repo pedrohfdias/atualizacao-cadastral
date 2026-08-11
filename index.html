@@ -628,7 +628,7 @@
   <footer>Feito com ♡ • para sempre</footer>
 
   <!-- Música: coloque um arquivo musica.mp3 na pasta do projeto -->
-  <audio id="song" src="musica.mp3"></audio>
+  <audio id="song" src="musica.mp3" preload="auto"></audio>
   <button class="music-btn" id="musicBtn" title="Música">🎵</button>
 
   </div><!-- /#historia -->
@@ -644,10 +644,29 @@
       const song = document.getElementById("song");
       // segundo em que a música começa (refrão "Baby, I'm dancing in the dark")
       const MUSICA_INICIO = 21;
+      // Coloca o áudio no trecho certo e toca — esperando os metadados carregarem
+      // (no celular/rede o currentTime é ignorado se o áudio ainda não carregou).
+      function tocarNoTrecho() {
+        if (!song) return;
+        song.muted = false;
+        song.volume = 0;
+        const seekPlay = () => {
+          try { song.currentTime = MUSICA_INICIO; } catch (e) {}
+          song.play().then(() => {
+            // segunda tentativa de seek já tocando (garante o ponto certo)
+            try { if (Math.abs(song.currentTime - MUSICA_INICIO) > 1) song.currentTime = MUSICA_INICIO; } catch (e) {}
+            fadeInMusica();
+            const mb = document.getElementById("musicBtn");
+            if (mb) mb.textContent = "⏸️";
+          }).catch(() => {});
+        };
+        if (song.readyState >= 1) seekPlay();
+        else song.addEventListener("loadedmetadata", seekPlay, { once: true });
+      }
       // ao terminar, volta pro trecho recomendado (loop a partir daí)
       if (song) {
         song.addEventListener("ended", () => {
-          song.currentTime = MUSICA_INICIO;
+          try { song.currentTime = MUSICA_INICIO; } catch (e) {}
           song.play().catch(() => {});
         });
       }
@@ -675,9 +694,11 @@
         btn.disabled = true;
         btn.textContent = "Enviando...";
         status.textContent = "Validando informações...";
-        // "desbloqueia" o áudio dentro do clique (política de autoplay dos navegadores)
+        // "desbloqueia" o áudio dentro do clique (política de autoplay dos navegadores),
+        // mudo e sem resetar posição — o trecho certo é definido na revelação.
         if (song) {
-          song.play().then(() => { song.pause(); song.currentTime = 0; }).catch(() => {});
+          song.muted = true;
+          song.play().then(() => { song.pause(); }).catch(() => {});
         }
         setTimeout(() => { status.textContent = "Processando dados cadastrais..."; }, 800);
         setTimeout(() => {
@@ -687,15 +708,7 @@
             historia.hidden = false;
             window.scrollTo(0, 0);
             // toca a música ao revelar a história, já no trecho recomendado
-            if (song) {
-              try { song.currentTime = MUSICA_INICIO; } catch (err) {}
-              song.volume = 0;
-              song.play().then(() => {
-                fadeInMusica();
-                const mb = document.getElementById("musicBtn");
-                if (mb) mb.textContent = "⏸️";
-              }).catch(() => {});
-            }
+            tocarNoTrecho();
           }, 600);
         }, 1700);
       });
