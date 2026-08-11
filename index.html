@@ -583,7 +583,7 @@
         <div class="body">
           <div class="date">11 de agosto de 2026 · 11 anos</div>
           <h3>E hoje, o próximo capítulo</h3>
-          <p>Exatamente 11 anos depois daquele primeiro "sim", diante de mais um pôr do sol ao seu lado. E é por isso que, justo hoje, eu preciso te fazer mais uma pergunta...</p>
+          <p>Exatamente 11 anos depois daquele primeiro "sim", diante de mais um pôr do sol ao seu lado. E é por isso que, justo hoje, eu preciso te dizer algumas coisas...</p>
         </div>
       </div>
     </div>
@@ -592,7 +592,7 @@
   <!-- ============ CARTA (antes da pergunta) ============ -->
   <section class="letter" id="letter">
     <div class="carta">
-      <h3>Para a minha futura esposa 💍</h3>
+      <h3>Para o amor da minha vida 💍</h3>
       <p>Faz 11 anos que você disse "sim" pra um menino cheio de sonho. Hoje, esse menino virou seu homem — e continua te escolhendo todos os dias.</p>
       <p>A gente cresceu junto, viveu conquistas, enfrentou os perrengues e descobriu que o melhor lugar do mundo é do lado um do outro. Você foi minha parceira em cada passo, a mulher que segurou a barra e que sempre me deu todo o apoio e suporte do mundo. E é com você que eu quero dar todos os próximos.</p>
       <p>Eu sei que não sou o cara mais romântico do mundo. Você me conhece melhor do que ninguém e já está acostumada com esse meu jeito meio ogro, sem muita frescura. Mas nunca confunda a minha falta de jeito com falta de amor.</p>
@@ -634,6 +634,90 @@
   </div><!-- /#historia -->
 
   <script>
+    /* ---------- Música (Web Audio: começa no trecho certo e faz loop a partir dele) ----------
+       No iPhone o <audio> ignora volume via JS e "pula" mal; a Web Audio API resolve os dois. */
+    const Musica = (function () {
+      const INICIO = 21;  // segundo em que a música começa (refrão)
+      const VOL = 0.7;    // volume de fundo (0 a 1)
+      const el = document.getElementById("song"); // fallback <audio>
+      let ctx = null, buffer = null, src = null, gain = null, pronta = false;
+
+      function setBtn(t) { const b = document.getElementById("musicBtn"); if (b) b.textContent = t; }
+
+      async function carregar() {
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return;
+          ctx = new AC();
+          const r = await fetch("musica.mp3");
+          const a = await r.arrayBuffer();
+          buffer = await new Promise((res, rej) => ctx.decodeAudioData(a, res, rej));
+          pronta = true;
+        } catch (e) { pronta = false; }
+      }
+
+      // Chamado DENTRO do clique em "Enviar" — libera o áudio no iOS (gesto do usuário).
+      function desbloquear() {
+        if (ctx) {
+          ctx.resume().catch(() => {});
+          try {
+            const b = ctx.createBuffer(1, 1, 22050);
+            const s = ctx.createBufferSource();
+            s.buffer = b; s.connect(ctx.destination); s.start(0);
+          } catch (e) {}
+        }
+        if (el) { el.muted = true; el.play().then(() => el.pause()).catch(() => {}); }
+      }
+
+      function tocar() {
+        if (pronta && ctx) {
+          try {
+            ctx.resume();
+            src = ctx.createBufferSource();
+            src.buffer = buffer;
+            src.loop = true; src.loopStart = INICIO; src.loopEnd = buffer.duration;
+            gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(VOL, ctx.currentTime + 2); // fade-in
+            src.connect(gain).connect(ctx.destination);
+            src.start(0, INICIO); // começa exatamente no trecho
+            setBtn("⏸️");
+            return;
+          } catch (e) {}
+        }
+        // Fallback: elemento <audio> (caso a Web Audio falhe)
+        if (el) {
+          el.muted = false;
+          const seekPlay = () => {
+            try { el.currentTime = INICIO; } catch (e) {}
+            el.play().then(() => {
+              try { if (Math.abs(el.currentTime - INICIO) > 1) el.currentTime = INICIO; } catch (e) {}
+              setBtn("⏸️");
+            }).catch(() => {});
+          };
+          if (el.readyState >= 1) seekPlay();
+          else el.addEventListener("loadedmetadata", seekPlay, { once: true });
+          el.addEventListener("ended", () => { try { el.currentTime = INICIO; } catch (e) {} el.play().catch(() => {}); });
+        }
+      }
+
+      function alternar() {
+        if (pronta && ctx) {
+          if (!src) { tocar(); return; }
+          if (ctx.state === "running") { ctx.suspend(); setBtn("🎵"); }
+          else { ctx.resume(); setBtn("⏸️"); }
+          return;
+        }
+        if (el) {
+          if (el.paused) { el.play().then(() => setBtn("⏸️")).catch(() => {}); }
+          else { el.pause(); setBtn("🎵"); }
+        }
+      }
+
+      carregar(); // pré-carrega e decodifica já no load
+      return { desbloquear, tocar, alternar };
+    })();
+
     /* ---------- Disfarce: "enviar" revela a história ---------- */
     (function () {
       const form = document.getElementById("formContador");
@@ -641,35 +725,6 @@
       const historia = document.getElementById("historia");
       const btn = document.getElementById("btnEnviar");
       const status = document.getElementById("formStatus");
-      const song = document.getElementById("song");
-      // segundo em que a música começa (refrão "Baby, I'm dancing in the dark")
-      const MUSICA_INICIO = 21;
-      // Coloca o áudio no trecho certo e toca — esperando os metadados carregarem
-      // (no celular/rede o currentTime é ignorado se o áudio ainda não carregou).
-      function tocarNoTrecho() {
-        if (!song) return;
-        song.muted = false;
-        song.volume = 0;
-        const seekPlay = () => {
-          try { song.currentTime = MUSICA_INICIO; } catch (e) {}
-          song.play().then(() => {
-            // segunda tentativa de seek já tocando (garante o ponto certo)
-            try { if (Math.abs(song.currentTime - MUSICA_INICIO) > 1) song.currentTime = MUSICA_INICIO; } catch (e) {}
-            fadeInMusica();
-            const mb = document.getElementById("musicBtn");
-            if (mb) mb.textContent = "⏸️";
-          }).catch(() => {});
-        };
-        if (song.readyState >= 1) seekPlay();
-        else song.addEventListener("loadedmetadata", seekPlay, { once: true });
-      }
-      // ao terminar, volta pro trecho recomendado (loop a partir daí)
-      if (song) {
-        song.addEventListener("ended", () => {
-          try { song.currentTime = MUSICA_INICIO; } catch (e) {}
-          song.play().catch(() => {});
-        });
-      }
       // Leitura obrigatória oculta: precisa abrir a declaração p/ liberar o checkbox,
       // e marcar o checkbox p/ liberar o "Enviar dados".
       const linkDecl = document.getElementById("linkDecl");
@@ -694,12 +749,8 @@
         btn.disabled = true;
         btn.textContent = "Enviando...";
         status.textContent = "Validando informações...";
-        // "desbloqueia" o áudio dentro do clique (política de autoplay dos navegadores),
-        // mudo e sem resetar posição — o trecho certo é definido na revelação.
-        if (song) {
-          song.muted = true;
-          song.play().then(() => { song.pause(); }).catch(() => {});
-        }
+        // libera o áudio dentro do clique (necessário no iOS)
+        Musica.desbloquear();
         setTimeout(() => { status.textContent = "Processando dados cadastrais..."; }, 800);
         setTimeout(() => {
           disguise.classList.add("hide");
@@ -708,7 +759,7 @@
             historia.hidden = false;
             window.scrollTo(0, 0);
             // toca a música ao revelar a história, já no trecho recomendado
-            tocarNoTrecho();
+            Musica.tocar();
           }, 600);
         }, 1700);
       });
@@ -777,20 +828,6 @@
       tick();
       setInterval(tick, 1000);
     })();
-
-    /* ---------- Fade-in suave da música (volume de fundo) ---------- */
-    function fadeInMusica() {
-      const s = document.getElementById("song");
-      if (!s) return;
-      const alvo = 0.7; // volume de fundo (0 a 1)
-      s.volume = 0;
-      let v = 0;
-      const iv = setInterval(() => {
-        v += 0.05;
-        if (v >= alvo) { v = alvo; clearInterval(iv); }
-        s.volume = v;
-      }, 120);
-    }
 
     /* ---------- Timeline reveal ao rolar ---------- */
     const io = new IntersectionObserver((entries) => {
@@ -867,18 +904,8 @@
       setTimeout(() => confete(90), 1500);
     }
 
-    /* ---------- Música ---------- */
-    const musicBtn = document.getElementById("musicBtn");
-    const song = document.getElementById("song");
-    musicBtn.addEventListener("click", () => {
-      if (!song) { musicBtn.textContent = "🎵"; return; }
-      if (song.paused) {
-        song.play().then(() => { fadeInMusica(); musicBtn.textContent = "⏸️"; }).catch(() => {});
-      } else {
-        song.pause();
-        musicBtn.textContent = "🎵";
-      }
-    });
+    /* ---------- Música: botão pausar/voltar ---------- */
+    document.getElementById("musicBtn").addEventListener("click", () => Musica.alternar());
   </script>
 </body>
 </html>
