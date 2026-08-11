@@ -628,93 +628,41 @@
   <footer>Feito com ♡ • para sempre</footer>
 
   <!-- Música: coloque um arquivo musica.mp3 na pasta do projeto -->
-  <audio id="song" src="musica.mp3" preload="auto"></audio>
+  <audio id="song" src="musica.mp3" preload="auto" loop></audio>
   <button class="music-btn" id="musicBtn" title="Música">🎵</button>
 
   </div><!-- /#historia -->
 
   <script>
-    /* ---------- Música (Web Audio: começa no trecho certo e faz loop a partir dele) ----------
-       No iPhone o <audio> ignora volume via JS e "pula" mal; a Web Audio API resolve os dois. */
+    /* ---------- Música (o arquivo já começa no refrão; é só tocar do início) ---------- */
     const Musica = (function () {
-      const INICIO = 21;  // segundo em que a música começa (refrão)
-      const VOL = 0.7;    // volume de fundo (0 a 1)
-      const el = document.getElementById("song"); // fallback <audio>
-      let ctx = null, buffer = null, src = null, gain = null, pronta = false;
-
+      const el = document.getElementById("song");
       function setBtn(t) { const b = document.getElementById("musicBtn"); if (b) b.textContent = t; }
-
-      async function carregar() {
+      // fade-in leve (funciona no desktop/Android; iPhone trava volume e ignora — sem problema)
+      function fade() {
         try {
-          const AC = window.AudioContext || window.webkitAudioContext;
-          if (!AC) return;
-          ctx = new AC();
-          const r = await fetch("musica.mp3");
-          const a = await r.arrayBuffer();
-          buffer = await new Promise((res, rej) => ctx.decodeAudioData(a, res, rej));
-          pronta = true;
-        } catch (e) { pronta = false; }
+          el.volume = 0; let v = 0;
+          const iv = setInterval(() => { v += 0.05; if (v >= 0.85) { v = 0.85; clearInterval(iv); } el.volume = v; }, 100);
+        } catch (e) {}
       }
-
       // Chamado DENTRO do clique em "Enviar" — libera o áudio no iOS (gesto do usuário).
       function desbloquear() {
-        if (ctx) {
-          ctx.resume().catch(() => {});
-          try {
-            const b = ctx.createBuffer(1, 1, 22050);
-            const s = ctx.createBufferSource();
-            s.buffer = b; s.connect(ctx.destination); s.start(0);
-          } catch (e) {}
-        }
-        if (el) { el.muted = true; el.play().then(() => el.pause()).catch(() => {}); }
+        if (!el) return;
+        el.muted = true;
+        el.play().then(() => { el.pause(); el.muted = false; try { el.currentTime = 0; } catch (e) {} }).catch(() => {});
       }
-
+      // Toca do início (o mp3 já começa no ponto certo).
       function tocar() {
-        if (pronta && ctx) {
-          try {
-            ctx.resume();
-            src = ctx.createBufferSource();
-            src.buffer = buffer;
-            src.loop = true; src.loopStart = INICIO; src.loopEnd = buffer.duration;
-            gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(VOL, ctx.currentTime + 2); // fade-in
-            src.connect(gain).connect(ctx.destination);
-            src.start(0, INICIO); // começa exatamente no trecho
-            setBtn("⏸️");
-            return;
-          } catch (e) {}
-        }
-        // Fallback: elemento <audio> (caso a Web Audio falhe)
-        if (el) {
-          el.muted = false;
-          const seekPlay = () => {
-            try { el.currentTime = INICIO; } catch (e) {}
-            el.play().then(() => {
-              try { if (Math.abs(el.currentTime - INICIO) > 1) el.currentTime = INICIO; } catch (e) {}
-              setBtn("⏸️");
-            }).catch(() => {});
-          };
-          if (el.readyState >= 1) seekPlay();
-          else el.addEventListener("loadedmetadata", seekPlay, { once: true });
-          el.addEventListener("ended", () => { try { el.currentTime = INICIO; } catch (e) {} el.play().catch(() => {}); });
-        }
+        if (!el) return;
+        el.muted = false;
+        try { el.currentTime = 0; } catch (e) {}
+        el.play().then(() => { setBtn("⏸️"); fade(); }).catch(() => {});
       }
-
       function alternar() {
-        if (pronta && ctx) {
-          if (!src) { tocar(); return; }
-          if (ctx.state === "running") { ctx.suspend(); setBtn("🎵"); }
-          else { ctx.resume(); setBtn("⏸️"); }
-          return;
-        }
-        if (el) {
-          if (el.paused) { el.play().then(() => setBtn("⏸️")).catch(() => {}); }
-          else { el.pause(); setBtn("🎵"); }
-        }
+        if (!el) { setBtn("🎵"); return; }
+        if (el.paused) { el.play().then(() => { setBtn("⏸️"); }).catch(() => {}); }
+        else { el.pause(); setBtn("🎵"); }
       }
-
-      carregar(); // pré-carrega e decodifica já no load
       return { desbloquear, tocar, alternar };
     })();
 
