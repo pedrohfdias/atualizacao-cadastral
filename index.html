@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ======================================================= -->
+  <!-- TROQUE OS NOMES AQUI (aparece na aba do navegador)      -->
+  <!-- ======================================================= -->
+  <title>Coleta de Dados · Setor Contábil</title>
+  <meta name="robots" content="noindex" />
+  <style>
+    :root {
+      --bg: #fdf7f3;
+      --ink: #3a3236;
+      --rose: #c9788a;
+      --rose-deep: #a84f66;
+      --gold: #c9a24b;
+      --card: #ffffff;
+      --shadow: 0 18px 45px -20px rgba(120, 60, 80, .45);
+      --serif: "Georgia", "Times New Roman", serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--serif);
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ---------- Disfarce: formulário contábil ---------- */
+    .disguise {
+      position: relative;
+      z-index: 20;
+      min-height: 100vh;
+      background: #eef1f4;
+      color: #2c3e50;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .disguise * { font-family: inherit; }
+    .disguise .form-card {
+      background: #fff;
+      width: 100%;
+      max-width: 470px;
+      border: 1px solid #dfe4ea;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px -16px rgba(20, 40, 80, .35);
+      padding: 26px 26px 20px;
+    }
+    .disguise .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .disguise .brand .logo {
+      width: 36px; height: 36px; border-radius: 7px;
+      background: #2d6cdf; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 16px;
+    }
+    .disguise .brand .co { font-size: 15px; font-weight: 700; color: #1f2d3d; line-height: 1.2; }
+    .disguise .brand .co small { display: block; font-size: 11px; font-weight: 400; color: #8a95a1; }
+    .disguise h1 { font-size: 16px; font-weight: 600; color: #1f2d3d; }
+    .disguise .sub { font-size: 12.5px; color: #7b8794; margin: 3px 0 8px; border-bottom: 1px solid #eef1f4; padding-bottom: 14px; }
+    .disguise label { display: block; font-size: 12.5px; color: #4a5568; margin: 13px 0 5px; font-weight: 600; }
+    .disguise input, .disguise select {
+      width: 100%; padding: 9px 11px; font-size: 14px;
+      border: 1px solid #cbd2d9; border-radius: 6px; background: #fff; color: #1f2d3d;
+    }
+    .disguise input:focus, .disguise select:focus {
+      outline: none; border-color: #2d6cdf; box-shadow: 0 0 0 3px rgba(45,108,223,.15);
+    }
+    .disguise .row { display: flex; gap: 12px; }
+    .disguise .row > div { flex: 1; }
+    .disguise .check { display: flex; align-items: flex-start; gap: 8px; margin: 16px 0 2px; font-size: 12.5px; color: #4a5568; }
+    .disguise .check input { width: auto; margin-top: 2px; }
+    .disguise .check a { color: #2d6cdf; text-decoration: underline; cursor: pointer; font-weight: 600; }
+    .disguise .declaracao {
+      margin: 0; max-height: 0; opacity: 0; overflow: hidden;
+      padding: 0 13px; border: 1px dashed transparent; border-radius: 6px;
+      background: #f7f9fb; font-size: 12px; color: #55606b; line-height: 1.55;
+      transition: max-height .45s ease, opacity .45s ease, margin .45s ease, padding .45s ease, border-color .45s ease;
+    }
+    .disguise .declaracao.show {
+      max-height: 220px; opacity: 1; margin: 10px 0 2px;
+      padding: 11px 13px; border-color: #cbd2d9;
+    }
+    .disguise button.enviar {
+      margin-top: 18px; width: 100%;
+      background: #2d6cdf; color: #fff; border: none; border-radius: 6px;
+      padding: 11px; font-size: 14.5px; font-weight: 600; cursor: pointer;
+    }
+    .disguise button.enviar:hover { background: #255bc0; }
+    .disguise button.enviar:disabled { background: #9db8e8; cursor: default; }
+    .disguise .foot { margin-top: 15px; text-align: center; font-size: 11px; color: #9aa5b1; }
+    .disguise .status { margin-top: 12px; text-align: center; font-size: 13px; color: #2d6cdf; min-height: 18px; }
+    .disguise.hide { opacity: 0; transition: opacity .6s ease; pointer-events: none; }
+
+    /* ---------- Mosaico de fotos (fundo) ---------- */
+    .bg-collage {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-rows: 1fr;
+      grid-auto-flow: dense;
+      gap: 0;
+    }
+    .bg-collage .tile {
+      background-size: cover;
+      background-position: center;
+    }
+    /* Véu por cima do mosaico: mantém o tom rosé e a leitura */
+    .bg-veil {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(120% 80% at 50% 0%, rgba(253,247,243,.50), rgba(253,247,243,.74) 60%, rgba(253,247,243,.88)),
+        rgba(253,247,243,.50);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+    @media (max-width: 620px) {
+      .bg-collage { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* ---------- Pétalas caindo (fundo) ---------- */
+    .petal {
+      position: fixed;
+      top: -40px;
+      font-size: 20px;
+      pointer-events: none;
+      z-index: 0;
+      animation: fall linear infinite;
+      opacity: .7;
+    }
+    @keyframes fall {
+      to { transform: translateY(110vh) rotate(360deg); }
+    }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      position: relative;
+      z-index: 1;
+    }
+    .hero .eyebrow {
+      letter-spacing: .35em;
+      text-transform: uppercase;
+      font-size: 13px;
+      color: var(--rose-deep);
+      margin-bottom: 18px;
+    }
+    .hero h1 {
+      font-size: clamp(38px, 9vw, 82px);
+      font-weight: 400;
+      color: var(--rose-deep);
+      line-height: 1.1;
+    }
+    .hero h1 .amp { color: var(--gold); font-style: italic; }
+    .hero p.sub {
+      margin-top: 20px;
+      font-size: clamp(16px, 4vw, 20px);
+      max-width: 520px;
+      color: var(--ink);
+    }
+    /* Contador "juntos há..." */
+    .counter {
+      margin-top: 26px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .counter .box {
+      background: rgba(255,255,255,.75);
+      border: 1px solid #f0dbe1;
+      border-radius: 12px;
+      padding: 10px 14px;
+      min-width: 64px;
+      box-shadow: 0 8px 22px -16px rgba(120,60,80,.5);
+    }
+    .counter .num { font-size: clamp(20px, 6vw, 30px); color: var(--rose-deep); line-height: 1; }
+    .counter .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-top: 5px; }
+    .counter .cap {
+      width: 100%; margin-top: 4px; font-size: 12px; letter-spacing: .18em;
+      text-transform: uppercase; color: var(--rose); order: -1;
+    }
+    .scroll-hint {
+      position: absolute;
+      bottom: 28px;
+      font-size: 13px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--rose);
+      animation: bob 2s ease-in-out infinite;
+    }
+    @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+
+    /* ---------- Timeline ---------- */
+    .timeline {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 60px 24px 40px;
+      position: relative;
+      z-index: 1;
+    }
+    .timeline h2 {
+      text-align: center;
+      font-weight: 400;
+      font-size: clamp(26px, 6vw, 38px);
+      color: var(--rose-deep);
+      margin-bottom: 50px;
+    }
+    .line {
+      position: absolute;
+      left: 50%;
+      top: 130px;
+      bottom: 40px;
+      width: 2px;
+      background: linear-gradient(var(--rose), transparent);
+      transform: translateX(-50%);
+    }
+    .moment {
+      position: relative;
+      display: flex;
+      margin-bottom: 46px;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all .8s ease;
+    }
+    .moment.show { opacity: 1; transform: none; }
+    .moment .dot {
+      position: absolute;
+      left: 50%;
+      top: 24px;
+      width: 16px; height: 16px;
+      background: var(--rose);
+      border: 3px solid var(--bg);
+      border-radius: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      width: calc(50% - 34px);
+    }
+    .moment:nth-child(odd) .card { margin-right: auto; }
+    .moment:nth-child(even) .card { margin-left: auto; }
+    .card .photo {
+      height: 170px;
+      background: linear-gradient(135deg, #f3d9df, #e7bcc7);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--rose-deep);
+      font-size: 13px;
+      background-size: cover;
+      background-position: center;
+    }
+    .card .body { padding: 16px 18px 20px; }
+    .card .date {
+      font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 6px;
+    }
+    .card h3 { font-weight: 400; font-size: 20px; color: var(--rose-deep); margin-bottom: 6px; }
+    .card p { font-size: 15px; }
+
+    /* ---------- O Pedido ---------- */
+    .proposal {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 24px;
+      position: relative;
+      z-index: 1;
+    }
+    .proposal h2 {
+      font-size: clamp(44px, 11vw, 88px);
+      font-weight: 700;
+      color: var(--rose-deep);
+      max-width: 720px;
+      min-height: 1.2em;
+      line-height: 1.15;
+    }
+    .cursor { display: inline-block; width: 3px; background: var(--rose); animation: blink 1s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .buttons { margin-top: 40px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; position: relative; }
+    button {
+      font-family: var(--serif);
+      font-size: 18px;
+      padding: 14px 34px;
+      border-radius: 40px;
+      border: none;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .2s ease;
+    }
+    .btn-yes {
+      background: var(--rose-deep);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+    .btn-yes:hover { transform: scale(1.06); }
+    .btn-no {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid #e2cdd4;
+      position: relative;
+    }
+
+    /* ---------- Tela do SIM ---------- */
+    .yes-screen {
+      display: none;
+      min-height: 100vh;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 24px;
+      position: relative;
+      z-index: 1;
+    }
+    .yes-screen.show { display: flex; }
+    .yes-screen .yes-photo {
+      width: clamp(150px, 42vw, 220px);
+      height: clamp(150px, 42vw, 220px);
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+      border: 5px solid #fff;
+      box-shadow: 0 20px 45px -18px rgba(120,60,80,.6);
+      margin-bottom: 26px;
+    }
+    .yes-screen h2 {
+      font-size: clamp(40px, 10vw, 80px);
+      color: var(--rose-deep);
+      font-weight: 700;
+    }
+    .yes-screen p { margin-top: 18px; font-size: clamp(17px, 4vw, 22px); max-width: 520px; }
+    /* Salve a data */
+    .save-date {
+      margin-top: 30px;
+      background: rgba(255,255,255,.8);
+      border: 1px solid #f0dbe1;
+      border-radius: 16px;
+      padding: 20px 30px;
+      box-shadow: var(--shadow);
+    }
+    .save-date .sd-label {
+      display: block; font-size: 12px; letter-spacing: .3em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 8px;
+    }
+    .save-date .sd-date { display: block; font-size: clamp(26px, 8vw, 44px); color: var(--rose-deep); letter-spacing: .06em; }
+    .save-date .sd-sub { display: block; margin-top: 8px; font-size: 14px; color: var(--ink); font-style: italic; }
+    /* Seção da carta (antes da pergunta) */
+    .letter {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 50px 24px 10px;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: center;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all .8s ease;
+    }
+    .letter.show { opacity: 1; transform: none; }
+    /* Cartinha */
+    .carta {
+      margin-top: 34px;
+      max-width: 560px;
+      background: rgba(255,255,255,.82);
+      border: 1px solid #f0dbe1;
+      border-radius: 16px;
+      padding: 26px 26px 22px;
+      box-shadow: var(--shadow);
+      text-align: left;
+    }
+    .carta h3 { font-weight: 400; color: var(--rose-deep); font-size: 20px; margin-bottom: 12px; text-align: center; }
+    .carta p { font-size: 16px; margin-top: 0 !important; margin-bottom: 12px; max-width: none !important; }
+    .carta .assinatura { text-align: right; color: var(--rose-deep); font-style: italic; font-size: 18px; margin-bottom: 0; }
+
+    /* ---------- Música ---------- */
+    .music-btn {
+      position: fixed;
+      bottom: 18px; right: 18px;
+      z-index: 5;
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid #e2cdd4;
+      font-size: 20px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: var(--shadow);
+    }
+
+    footer { text-align: center; padding: 40px 20px; color: #b7a6ab; font-size: 13px; position: relative; z-index: 1; }
+
+    @media (max-width: 620px) {
+      .line { left: 22px; }
+      .moment .dot { left: 22px; }
+      .card { width: calc(100% - 46px); margin-left: 46px !important; margin-right: 0 !important; }
+      .timeline { padding: 40px 18px 30px; }
+      .card .photo { height: 200px; }
+      .save-date { padding: 18px 22px; }
+      .carta { padding: 22px 20px 18px; }
+      .buttons { gap: 12px; }
+      button { font-size: 17px; padding: 13px 30px; }
+    }
+    @media (max-width: 400px) {
+      .disguise { padding: 14px; }
+      .disguise .form-card { padding: 22px 18px 18px; }
+      .disguise .row { flex-direction: column; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============ DISFARCE: formulário contábil ============ -->
+  <section class="disguise" id="disguise">
+    <form class="form-card" id="formContador" autocomplete="off">
+      <div class="brand">
+        <div class="logo">SP</div>
+        <div class="co">Sistema de Parceria<small>Uso interno</small></div>
+      </div>
+      <h1>Atualização Cadastral</h1>
+      <div class="sub">Preenchimento obrigatório para manter seus dados atualizados.</div>
+
+      <label>Nome completo</label>
+      <input type="text" name="nome" placeholder="Digite seu nome completo" />
+
+      <div class="row">
+        <div>
+          <label>CPF</label>
+          <input type="text" name="cpf" placeholder="000.000.000-00" />
+        </div>
+        <div>
+          <label>Data de nascimento</label>
+          <input type="text" name="nasc" placeholder="dd/mm/aaaa" />
+        </div>
+      </div>
+
+      <label>Estado civil</label>
+      <select name="estadocivil" required>
+        <option value="" disabled selected hidden>Selecione...</option>
+        <option>Namorando há 11 anos (com a mesma pessoa)</option>
+        <option>Quase noiva…</option>
+        <option>À espera de um milagre</option>
+      </select>
+
+      <label class="check">
+        <input type="checkbox" name="declaro" id="chkDeclaro" required disabled />
+        Li e concordo com a <a id="linkDecl" role="button" tabindex="0">declaração de veracidade</a>.
+      </label>
+      <div class="declaracao" id="declaracao">
+        Declaro que as informações acima são verídicas — inclusive os 11 anos com a mesma pessoa — e que sigo firme na espera de um certo milagre.
+      </div>
+
+      <button type="submit" class="enviar" id="btnEnviar" disabled>Enviar dados</button>
+      <div class="status" id="formStatus"></div>
+      <div class="foot">Este canal é monitorado · Uso interno</div>
+    </form>
+  </section>
+
+  <!-- ============ CONTEÚDO REAL (revelado após "enviar") ============ -->
+  <div id="historia" hidden>
+
+  <!-- ============ FUNDO: mosaico de fotos ============ -->
+  <div class="bg-collage" id="bgCollage"></div>
+  <div class="bg-veil"></div>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="eyebrow">Uma história de amor</div>
+    <!-- TROQUE OS NOMES -->
+    <h1>Pedro <span class="amp">&amp;</span> Jennifer</h1>
+    <p class="sub">Um amor que começou na adolescência e hoje completa 11 anos. Role para baixo e reviva a nossa história comigo. ♡</p>
+    <div class="counter" id="counter" aria-label="tempo juntos">
+      <div class="cap">Juntos há</div>
+      <div class="box"><div class="num" id="cAnos">0</div><div class="lbl">anos</div></div>
+      <div class="box"><div class="num" id="cDias">0</div><div class="lbl">dias</div></div>
+      <div class="box"><div class="num" id="cHoras">0</div><div class="lbl">horas</div></div>
+      <div class="box"><div class="num" id="cMin">0</div><div class="lbl">min</div></div>
+      <div class="box"><div class="num" id="cSeg">0</div><div class="lbl">seg</div></div>
+    </div>
+    <div class="scroll-hint">↓ role para começar</div>
+  </section>
+
+  <!-- ============ TIMELINE ============ -->
+  <!--
+    COMO EDITAR:
+    - Duplique um bloco <div class="moment"> para adicionar mais momentos.
+    - Para colocar uma FOTO real, troque a linha do .photo por:
+        <div class="photo" style="background-image:url('foto1.jpg')"></div>
+      e coloque o arquivo foto1.jpg na mesma pasta.
+  -->
+  <section class="timeline">
+    <h2>Nossa linha do tempo</h2>
+    <div class="line"></div>
+
+    <div class="moment">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="photo" style="background-image:url('img/01-adolescentes.jpg')"></div>
+        <div class="body">
+          <div class="date">Ainda adolescentes</div>
+          <h3>Onde tudo começou</h3>
+          <p>Éramos só dois adolescentes, cheios de sonho e sem noção do tamanho do que estava começando. Mas já tinha ali um olhar, um sorriso e um começo que o tempo nunca deixou esquecer.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="moment">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="photo" style="background-image:url('img/02-namoro.jpg')"></div>
+        <div class="body">
+          <div class="date">11 de agosto de 2015</div>
+          <h3>O dia em que virou "nós"</h3>
+          <p>Foi neste dia que aquele amor de adolescência ganhou um nome. Começamos a namorar — e, desde então, nunca mais quis olhar pra outro lado. ♡</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="moment">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="photo" style="background-image:url('img/03-aventuras.jpg')"></div>
+        <div class="body">
+          <div class="date">Os anos seguintes</div>
+          <h3>Só nós dois</h3>
+          <p>No meio da correria, o que eu mais gostava era do simples: você encostadinha em mim, um programa a dois, sem pressa. A gente foi crescendo junto, e eu descobrindo que meu lugar preferido é sempre pertinho de você.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="moment">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="photo" style="background-image:url('img/04-conquista.jpg'); background-position: center 30%;"></div>
+        <div class="body">
+          <div class="date">Nossas conquistas</div>
+          <h3>Sempre ao meu lado</h3>
+          <p>Cada sonho que corri atrás, você correu junto. Você acompanhou cada conquista minha e, mais do que isso, foi você quem fez cada uma delas dar certo. Nada disso teria o mesmo sentido sem você comigo.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="moment">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="photo" style="background-image:url('img/05-mar.jpg')"></div>
+        <div class="body">
+          <div class="date">Nossos cantinhos no mundo</div>
+          <h3>Mar, sol e a gente</h3>
+          <p>Água azul, pés descalços e um beijo no meio do mar. Onde quer que a gente vá, meu lugar preferido continua sendo bem aí, do seu lado.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="moment">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="photo" style="background-image:url('img/06-hoje.jpg')"></div>
+        <div class="body">
+          <div class="date">11 de agosto de 2026 · 11 anos</div>
+          <h3>E hoje, o próximo capítulo</h3>
+          <p>Exatamente 11 anos depois daquele primeiro "sim", diante de mais um pôr do sol ao seu lado. E é por isso que, justo hoje, eu preciso te fazer mais uma pergunta...</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CARTA (antes da pergunta) ============ -->
+  <section class="letter" id="letter">
+    <div class="carta">
+      <h3>Para a minha futura esposa 💍</h3>
+      <p>Faz 11 anos que você disse "sim" pra um menino cheio de sonho. Hoje, esse menino virou seu homem — e continua te escolhendo todos os dias.</p>
+      <p>A gente cresceu junto, viveu conquistas, enfrentou os perrengues e descobriu que o melhor lugar do mundo é do lado um do outro. Você foi minha parceira em cada passo, a mulher que segurou a barra e que sempre me deu todo o apoio e suporte do mundo. E é com você que eu quero dar todos os próximos.</p>
+      <p>Eu sei que não sou o cara mais romântico do mundo. Você me conhece melhor do que ninguém e já está acostumada com esse meu jeito meio ogro, sem muita frescura. Mas nunca confunda a minha falta de jeito com falta de amor.</p>
+      <p>Porque a verdade é uma só, e eu faço questão de ressaltar: eu mato por você. E morro também... mas, claro, só se eu não conseguir dar o meu jeito na situação antes, né? Porque você sabe muito bem que eu não entro em combate para perder.</p>
+      <p>E é por isso que, hoje, eu espero receber mais um "sim" de você... e que agora seja pra vida toda.</p>
+      <p>Agora chega mais perto, que é sério...</p>
+      <p class="assinatura">Com todo o meu amor (do meu jeito),<br>Pedro</p>
+    </div>
+  </section>
+
+  <!-- ============ O PEDIDO ============ -->
+  <section class="proposal">
+    <h2><span id="typed"></span><span class="cursor">&nbsp;</span></h2>
+    <div class="buttons">
+      <button class="btn-yes" onclick="dizerSim()">Sim! 💍</button>
+      <button class="btn-no" id="btnNo">Não</button>
+    </div>
+  </section>
+
+  <!-- ============ TELA DO SIM ============ -->
+  <section class="yes-screen" id="yesScreen">
+    <div class="yes-photo" style="background-image:url('img/06-hoje.jpg')"></div>
+    <h2>Ela disse SIM!</h2>
+    <p>Você acabou de me fazer o homem mais feliz do mundo. Mal posso esperar para viver o resto da vida ao seu lado. ♡</p>
+
+    <div class="save-date">
+      <span class="sd-label">O dia do nosso sim</span>
+      <span class="sd-date">11 · 08 · 2026</span>
+      <span class="sd-sub">onde o "para sempre" começou de verdade</span>
+    </div>
+  </section>
+
+  <footer>Feito com ♡ • para sempre</footer>
+
+  <!-- Música: coloque um arquivo musica.mp3 na pasta do projeto -->
+  <audio id="song" src="musica.mp3"></audio>
+  <button class="music-btn" id="musicBtn" title="Música">🎵</button>
+
+  </div><!-- /#historia -->
+
+  <script>
+    /* ---------- Disfarce: "enviar" revela a história ---------- */
+    (function () {
+      const form = document.getElementById("formContador");
+      const disguise = document.getElementById("disguise");
+      const historia = document.getElementById("historia");
+      const btn = document.getElementById("btnEnviar");
+      const status = document.getElementById("formStatus");
+      const song = document.getElementById("song");
+      // segundo em que a música começa (refrão "Baby, I'm dancing in the dark")
+      const MUSICA_INICIO = 21;
+      // ao terminar, volta pro trecho recomendado (loop a partir daí)
+      if (song) {
+        song.addEventListener("ended", () => {
+          song.currentTime = MUSICA_INICIO;
+          song.play().catch(() => {});
+        });
+      }
+      // Leitura obrigatória oculta: precisa abrir a declaração p/ liberar o checkbox,
+      // e marcar o checkbox p/ liberar o "Enviar dados".
+      const linkDecl = document.getElementById("linkDecl");
+      const declaracao = document.getElementById("declaracao");
+      const chkDeclaro = document.getElementById("chkDeclaro");
+      function abrirDeclaracao() {
+        declaracao.classList.add("show");
+        chkDeclaro.disabled = false;
+      }
+      if (linkDecl) {
+        linkDecl.addEventListener("click", abrirDeclaracao);
+        linkDecl.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); abrirDeclaracao(); }
+        });
+      }
+      if (chkDeclaro) {
+        chkDeclaro.addEventListener("change", () => { btn.disabled = !chkDeclaro.checked; });
+      }
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.textContent = "Enviando...";
+        status.textContent = "Validando informações...";
+        // "desbloqueia" o áudio dentro do clique (política de autoplay dos navegadores)
+        if (song) {
+          song.play().then(() => { song.pause(); song.currentTime = 0; }).catch(() => {});
+        }
+        setTimeout(() => { status.textContent = "Processando dados cadastrais..."; }, 800);
+        setTimeout(() => {
+          disguise.classList.add("hide");
+          setTimeout(() => {
+            disguise.style.display = "none";
+            historia.hidden = false;
+            window.scrollTo(0, 0);
+            // toca a música ao revelar a história, já no trecho recomendado
+            if (song) {
+              try { song.currentTime = MUSICA_INICIO; } catch (err) {}
+              song.volume = 0;
+              song.play().then(() => {
+                fadeInMusica();
+                const mb = document.getElementById("musicBtn");
+                if (mb) mb.textContent = "⏸️";
+              }).catch(() => {});
+            }
+          }, 600);
+        }, 1700);
+      });
+    })();
+
+    /* ---------- Mosaico de fotos no fundo ---------- */
+    (function () {
+      const collage = document.getElementById("bgCollage");
+      const total = 16; // img/bg/bg1.jpg ... bg16.jpg
+      const ordem = Array.from({ length: total }, (_, i) => i + 1);
+      // embaralha para um mosaico mais natural
+      for (let i = ordem.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ordem[i], ordem[j]] = [ordem[j], ordem[i]];
+      }
+      ordem.forEach(n => {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        tile.style.backgroundImage = `url('img/bg/bg${n}.jpg')`;
+        collage.appendChild(tile);
+      });
+    })();
+
+    /* ---------- Pétalas ---------- */
+    const petals = ["🌸","🌷","💗","🌹","✿"];
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement("div");
+      p.className = "petal";
+      p.textContent = petals[i % petals.length];
+      p.style.left = Math.random() * 100 + "vw";
+      p.style.animationDuration = (7 + Math.random() * 8) + "s";
+      p.style.animationDelay = (Math.random() * 8) + "s";
+      p.style.fontSize = (14 + Math.random() * 16) + "px";
+      document.body.appendChild(p);
+    }
+
+    /* ---------- Contador "juntos há..." ---------- */
+    (function () {
+      const inicio = new Date(2015, 7, 11, 0, 0, 0); // 11 de agosto de 2015
+      const elAnos = document.getElementById("cAnos");
+      const elDias = document.getElementById("cDias");
+      const elHoras = document.getElementById("cHoras");
+      const elMin = document.getElementById("cMin");
+      const elSeg = document.getElementById("cSeg");
+      if (!elAnos) return;
+      const pad = (n) => String(n).padStart(2, "0");
+      function tick() {
+        const agora = new Date();
+        let anos = agora.getFullYear() - inicio.getFullYear();
+        let ultimoAniv = new Date(agora.getFullYear(), 7, 11, 0, 0, 0);
+        if (agora < ultimoAniv) {
+          anos -= 1;
+          ultimoAniv = new Date(agora.getFullYear() - 1, 7, 11, 0, 0, 0);
+        }
+        let resto = agora - ultimoAniv;
+        const dias = Math.floor(resto / 86400000); resto -= dias * 86400000;
+        const horas = Math.floor(resto / 3600000); resto -= horas * 3600000;
+        const min = Math.floor(resto / 60000); resto -= min * 60000;
+        const seg = Math.floor(resto / 1000);
+        elAnos.textContent = anos;
+        elDias.textContent = dias;
+        elHoras.textContent = pad(horas);
+        elMin.textContent = pad(min);
+        elSeg.textContent = pad(seg);
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
+
+    /* ---------- Fade-in suave da música (volume de fundo) ---------- */
+    function fadeInMusica() {
+      const s = document.getElementById("song");
+      if (!s) return;
+      const alvo = 0.7; // volume de fundo (0 a 1)
+      s.volume = 0;
+      let v = 0;
+      const iv = setInterval(() => {
+        v += 0.05;
+        if (v >= alvo) { v = alvo; clearInterval(iv); }
+        s.volume = v;
+      }, 120);
+    }
+
+    /* ---------- Timeline reveal ao rolar ---------- */
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add("show"); });
+    }, { threshold: 0.25 });
+    document.querySelectorAll(".moment").forEach(m => io.observe(m));
+    document.querySelectorAll(".letter").forEach(m => io.observe(m));
+
+    /* ---------- Efeito de digitação no pedido ---------- */
+    // TROQUE a pergunta do pedido aqui:
+    const pergunta = "Você quer casar comigo?";
+    const typed = document.getElementById("typed");
+    let started = false;
+    const propObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting && !started) {
+          started = true;
+          let i = 0;
+          const t = setInterval(() => {
+            typed.textContent = pergunta.slice(0, ++i);
+            if (i >= pergunta.length) clearInterval(t);
+          }, 75);
+        }
+      });
+    }, { threshold: 0.6 });
+    propObserver.observe(document.querySelector(".proposal"));
+
+    /* ---------- Botão "Não" que foge ---------- */
+    const btnNo = document.getElementById("btnNo");
+    const naoMsgs = [
+      "Tem certeza? 👀", "Pensa de novo…", "Sério mesmo?", "Essa não vale 😅",
+      "O 'Sim' tá logo ali →", "Ihh, quase!", "Nem tenta 😄", "É 'Sim', vai…"
+    ];
+    let naoIdx = -1;
+    function fugir() {
+      const x = (Math.random() * 60 - 30);
+      const y = (Math.random() * 60 - 30);
+      btnNo.style.transform = `translate(${x}vw, ${y}vh)`;
+      naoIdx = (naoIdx + 1) % naoMsgs.length;
+      btnNo.textContent = naoMsgs[naoIdx];
+    }
+    btnNo.addEventListener("mouseover", fugir);
+    btnNo.addEventListener("click", fugir);
+    btnNo.addEventListener("touchstart", (e) => { e.preventDefault(); fugir(); });
+
+    /* ---------- SIM + confete ---------- */
+    function dizerSim() {
+      document.querySelector(".proposal").style.display = "none";
+      const ys = document.getElementById("yesScreen");
+      ys.classList.add("show");
+      ys.scrollIntoView({ behavior: "smooth" });
+      festaConfete();
+      // vibração longa de comemoração (Android; iPhone ignora)
+      if (navigator.vibrate) {
+        navigator.vibrate([300, 100, 300, 100, 600]);
+      }
+    }
+    function confete(qtd) {
+      const emojis = ["💖","🎉","💍","💕","✨","🌸","💐","🥂"];
+      for (let i = 0; i < qtd; i++) {
+        const c = document.createElement("div");
+        c.className = "petal";
+        c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        c.style.left = Math.random() * 100 + "vw";
+        c.style.animationDuration = (3 + Math.random() * 4) + "s";
+        c.style.fontSize = (18 + Math.random() * 26) + "px";
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 8000);
+      }
+    }
+    function festaConfete() {
+      confete(120);
+      setTimeout(() => confete(90), 700);
+      setTimeout(() => confete(90), 1500);
+    }
+
+    /* ---------- Música ---------- */
+    const musicBtn = document.getElementById("musicBtn");
+    const song = document.getElementById("song");
+    musicBtn.addEventListener("click", () => {
+      if (!song) { musicBtn.textContent = "🎵"; return; }
+      if (song.paused) {
+        song.play().then(() => { fadeInMusica(); musicBtn.textContent = "⏸️"; }).catch(() => {});
+      } else {
+        song.pause();
+        musicBtn.textContent = "🎵";
+      }
+    });
+  </script>
+</body>
+</html>
